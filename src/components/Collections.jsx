@@ -1,8 +1,54 @@
+import { useEffect, useState } from 'react';
+import { supabase } from '../supabaseClient';
 import Reveal from './Reveal';
 import saree1 from '../assets/saree1.png';
 import saree2 from '../assets/saree2.png';
 
 export default function Collections() {
+    // Initial static data as fallback
+    const staticProducts = [
+        {
+            id: 1,
+            name: "Ethereal Mint Banarasi",
+            price: 18500,
+            image_url: saree1 // Local import
+        },
+        {
+            id: 2,
+            name: "Indigo Mist Linen",
+            price: 6200,
+            image_url: saree2 // Local import
+        }
+    ];
+
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('products')
+                    .select('*');
+
+                if (error) throw error;
+
+                if (data && data.length > 0) {
+                    setProducts(data);
+                } else {
+                    setProducts(staticProducts);
+                }
+            } catch (error) {
+                console.warn("Supabase fetch error (likely due to missing keys or table), using static data:", error.message);
+                setProducts(staticProducts);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProducts();
+    }, []);
+
     return (
         <section id="collections" className="section">
             <div className="container">
@@ -14,35 +60,34 @@ export default function Collections() {
                 </Reveal>
 
                 <div className="products-grid">
-                    <Reveal>
-                        <div className="product-card">
-                            <div className="product-image">
-                                <img src={saree1} alt="Pastel Green Banarasi Saree" />
-                                <div className="product-overlay">
-                                    <button className="view-btn">View Details</button>
+                    {loading ? (
+                        <p style={{ textAlign: 'center' }}>Loading collection...</p>
+                    ) : (
+                        products.map(product => (
+                            <Reveal key={product.id}>
+                                <div className="product-card">
+                                    <div className="product-image">
+                                        {/* Handle both local imports and remote URLs */}
+                                        <img
+                                            src={product.image_url}
+                                            alt={product.name}
+                                            onError={(e) => {
+                                                e.target.onerror = null; // Prevent infinite loop
+                                                e.target.src = 'https://via.placeholder.com/400x600?text=Image+Not+Found';
+                                            }}
+                                        />
+                                        <div className="product-overlay">
+                                            <button className="view-btn">View Details</button>
+                                        </div>
+                                    </div>
+                                    <div className="product-info">
+                                        <h3>{product.name}</h3>
+                                        <p className="price">₹{product.price.toLocaleString()}</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="product-info">
-                                <h3>Ethereal Mint Banarasi</h3>
-                                <p className="price">₹18,500</p>
-                            </div>
-                        </div>
-                    </Reveal>
-
-                    <Reveal>
-                        <div className="product-card">
-                            <div className="product-image">
-                                <img src={saree2} alt="Ivory and Indigo Linen Saree" />
-                                <div className="product-overlay">
-                                    <button className="view-btn">View Details</button>
-                                </div>
-                            </div>
-                            <div className="product-info">
-                                <h3>Indigo Mist Linen</h3>
-                                <p className="price">₹6,200</p>
-                            </div>
-                        </div>
-                    </Reveal>
+                            </Reveal>
+                        ))
+                    )}
                 </div>
             </div>
         </section>
